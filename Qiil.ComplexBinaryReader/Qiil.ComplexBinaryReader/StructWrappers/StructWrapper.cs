@@ -6,9 +6,9 @@ namespace Qiil.IO
 {
     public interface IStructWrapper { }
 
-    public abstract class StructWrapper<T> : StructWrapper<ComplexBinaryReader, T>
+    public abstract class StructWrapper<T> : StructWrapper<ComplexBinaryReader, T>, IStructWrapper
             where T : struct
-        , IStructWrapper
+        
     {
         public const uint DEFAULT_CURRENT_POSITION = 0xFFFFFFFF;
         protected StructWrapper(
@@ -26,10 +26,10 @@ namespace Qiil.IO
         }
     }
 
-    public abstract class StructWrapper<R, T>
+    public abstract class StructWrapper<R, T> : IStructWrapper
             where R : ComplexBinaryReader
             where T : struct
-        , IStructWrapper
+        
     {
         [JsonIgnore]
         public R Reader { get; }
