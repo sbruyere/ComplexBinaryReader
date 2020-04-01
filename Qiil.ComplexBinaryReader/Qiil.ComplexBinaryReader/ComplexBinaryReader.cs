@@ -169,35 +169,77 @@ namespace Qiil.IO
             Get(this, ref destination);
         }
 
-        public string GetASCIIStr(int size = -1)
+        //public string GetASCIIStr(int size = -1)
+        //{
+        //    if (size == -1)
+        //        size = Get<ushort>();
+
+        //    if (size == 0)
+        //        return string.Empty;
+
+        //    // Read in a byte array
+        //    byte[] bytes = Reader.ReadBytes(size);
+
+        //    byte zero = Reader.ReadByte();
+
+        //    return Encoding.ASCII.GetString(bytes);
+        //}
+
+
+        //public string GetStr(int size = -1, Encoding encoding = null)
+        //{
+        //    if (encoding == null)
+        //        encoding = Encoding.ASCII;
+
+        //    if (size == -1)
+        //        size = Get<ushort>();
+
+        //    // Read in a byte array
+        //    byte[] bytes = Reader.ReadBytes(size + 1);
+
+        //    return encoding.GetString(bytes);
+        //}
+
+        public string GetStr(
+            ulong ptr, 
+            PtrType ptrType, 
+            int size = -1, 
+            Encoding encoding = null, 
+            bool nullTerminated = false)
         {
-            if (size == -1)
-                size = Get<ushort>();
+            Seek((long)Resolve(ptr, ptrType), SeekOrigin.Begin);
 
-
-            if (size == 0)
-                (0).ToString();
-            // Read in a byte array
-            byte[] bytes = Reader.ReadBytes(size);
-
-            byte zero = Reader.ReadByte();
-
-            return Encoding.ASCII.GetString(bytes);
+            return GetStr(size, encoding, nullTerminated);
         }
 
 
-        public string GetStr(int size = -1, Encoding encoding = null)
+        public string GetStr(
+            int size,
+            Encoding encoding = null,
+            bool nullTerminated = false)
         {
             if (encoding == null)
                 encoding = Encoding.ASCII;
 
+            BinaryReader textReader = new BinaryReader(this.Stream, encoding);
+
             if (size == -1)
                 size = Get<ushort>();
 
-            // Read in a byte array
-            byte[] bytes = Reader.ReadBytes(size + 1);
+            var chars = textReader.ReadChars(size);
 
-            return encoding.GetString(bytes);
+            if (nullTerminated)
+                Seek(1, SeekOrigin.Current);
+
+            return new string(chars);
+        }
+
+
+        public string GetStr(
+            Encoding encoding = null,
+            bool nullTerminated = false)
+        {
+            return GetStr(-1, encoding, nullTerminated);
         }
 
 
@@ -235,8 +277,7 @@ namespace Qiil.IO
         #endregion Properties
         public static string ReadNullTerminatedString(BinaryReader stream, Encoding encoding = null)
         {
-            Encoding enc = encoding ?? Encoding.ASCII;
-            return stream.ReadStringNull(enc);
+            return stream.ReadStringNull(encoding ?? Encoding.ASCII);
         }
 
 
@@ -246,13 +287,13 @@ namespace Qiil.IO
 
             Reader.BaseStream.Seek((long)structPtr, SeekOrigin.Begin);
 
-            return ReadNullTerminatedString(Reader, encoding);
+            return ReadNullTerminatedString(Reader, encoding ?? Encoding.ASCII);
         }
 
         public string VGetStr(ulong structRVA, Encoding encoding = null, PtrType ptrType = PtrType.VA)
         {
             var ptr = Resolve(structRVA, ptrType);
-            return RGetStr(ptr, encoding);
+            return RGetStr(ptr, encoding ?? Encoding.ASCII);
         }
 
         public Guid RGetGuid(ulong structPtr)
