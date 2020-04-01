@@ -128,7 +128,7 @@ namespace Qiil.IO
         public static T Get<T>(BinaryReader reader)
         {
             if (typeof(IStructWrapper).IsAssignableFrom(typeof(T)))
-                return (T)Activator.CreateInstance(typeof(T));
+                return (T)Activator.CreateInstance(typeof(T), (object)reader);
 
             bool isEnum = typeof(T).IsEnum;
 
