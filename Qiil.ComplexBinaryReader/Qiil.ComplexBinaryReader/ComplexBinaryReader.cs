@@ -97,15 +97,17 @@ namespace Qiil.IO
             return Get<T>(Reader);
         }
 
-        public IEnumerable<T> GetArrayOf<T>(uint count)
+        public T[] GetArrayOf<T>(uint count)
         {
+            List<T> lstRet = new List<T>();
+
             for (int i = 0; i < count; i++)
-            {
-                yield return Get<T>();
-            }
+                lstRet.Add(Get<T>());
+
+            return lstRet.ToArray();
         }
 
-        public IEnumerable<T> GetArrayOf<T>(uint ptr, uint count, PtrType ptrType = PtrType.VA)
+        public T[] GetArrayOf<T>(uint ptr, uint count, PtrType ptrType = PtrType.VA)
         {
             if (ptr == 0)
                 return new T[0];
@@ -124,6 +126,9 @@ namespace Qiil.IO
         /// <returns></returns>
         public static T Get<T>(BinaryReader reader)
         {
+            if (typeof(T) == typeof(IStructWrapper))
+                return (T)Activator.CreateInstance(typeof(T));
+
             bool isEnum = typeof(T).IsEnum;
 
             Type marshalType = typeof(T).IsEnum
@@ -136,6 +141,7 @@ namespace Qiil.IO
 
             // Pin the managed memory while, copy it out the data, then unpin it
             GCHandle handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+            
             T theStructure = (T)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), marshalType);
             handle.Free();
 
