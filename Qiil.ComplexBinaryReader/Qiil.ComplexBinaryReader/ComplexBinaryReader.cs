@@ -102,7 +102,7 @@ namespace Qiil.IO
 
         public T Get<T>()
         {
-            return Get<T>(Reader);
+            return Get<T>(this);
         }
 
         public T[] GetArrayOf<T>(uint count)

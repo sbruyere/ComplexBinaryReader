@@ -56,6 +56,8 @@ namespace Qiil.IO
             R reader)
         {
             Reader = reader;
+
+            BasePtr = (ulong)reader.Stream.Position;
             
             Base = reader.Get<T>();
         }
@@ -67,15 +69,15 @@ namespace Qiil.IO
         /// <param name="reader">Reader.</param>
         /// <returns></returns>
         public static K Get<K>(
-            R reader) where K : StructWrapper<R, T>, new()
+            R reader) where K : StructWrapper<R, T>
         {
-            return (K)Activator.CreateInstance(typeof(K), new object[] { });
+            return (K)Activator.CreateInstance(typeof(K), new object[] { reader });
         }
 
         public static K Get<K>(
             R reader,
-            ulong ptr = StructWrapperConst.DEFAULT_CURRENT_POSITION,
-            PtrType ptrType = PtrType.FileOffset) where K: StructWrapper<R, T>, new()
+            ulong ptr,
+            PtrType ptrType = PtrType.FileOffset) where K: StructWrapper<R, T>
         {
             return (K)Activator.CreateInstance(typeof(K), new object[] { reader, ptr, ptrType });
         }
