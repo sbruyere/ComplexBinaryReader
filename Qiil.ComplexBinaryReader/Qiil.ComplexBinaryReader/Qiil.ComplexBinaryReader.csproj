@@ -11,8 +11,10 @@ Simplify parsing of complex binary format.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageProjectUrl>https://github.com/sbruyere/ComplexBinaryReader</PackageProjectUrl>
     <RepositoryUrl>https://github.com/sbruyere/ComplexBinaryReader</RepositoryUrl>
-    <Version>1.0.2</Version>
-    <FileVersion>1.0.2.0</FileVersion>
+    <Version>1.0.3</Version>
+    <FileVersion>1.0.3.0</FileVersion>
+    <AssemblyVersion>1.0.3.0</AssemblyVersion>
+    <Copyright>Sylvain Bruyere</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
