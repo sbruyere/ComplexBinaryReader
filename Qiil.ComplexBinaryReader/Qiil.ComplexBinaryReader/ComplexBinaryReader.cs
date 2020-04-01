@@ -117,6 +117,7 @@ namespace Qiil.IO
             return GetArrayOf<T>(count);
         }
 
+
         /// <summary>
         /// Reads in a block from a file and converts it to the struct
         /// type specified by the template parameter
@@ -126,7 +127,7 @@ namespace Qiil.IO
         /// <returns></returns>
         public static T Get<T>(BinaryReader reader)
         {
-            if (typeof(T) == typeof(IStructWrapper))
+            if (typeof(IStructWrapper).IsAssignableFrom(typeof(T)))
                 return (T)Activator.CreateInstance(typeof(T));
 
             bool isEnum = typeof(T).IsEnum;
@@ -141,7 +142,7 @@ namespace Qiil.IO
 
             // Pin the managed memory while, copy it out the data, then unpin it
             GCHandle handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
-            
+
             T theStructure = (T)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), marshalType);
             handle.Free();
 
