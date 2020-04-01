@@ -78,6 +78,14 @@ namespace Qiil.IO
             return Get<T>(reader);
         }
 
+
+        public static T FromBinaryReaderFromPtr<T>(ComplexBinaryReader reader, ulong structPtr)
+        {
+            reader.Seek((long)structPtr, SeekOrigin.Begin);
+
+            return Get<T>(reader);
+        }
+
         /// <summary>
         /// Reads in a block from a file and converts it to the struct
         /// type specified by the template parameter
@@ -89,7 +97,7 @@ namespace Qiil.IO
         {
             ulong structPtr = Resolve(structRVA, ptrType);
 
-            return FromBinaryReaderFromPtr<T>(Reader, structPtr);
+            return FromBinaryReaderFromPtr<T>(this, structPtr);
         }
 
         public T Get<T>()
@@ -117,6 +125,13 @@ namespace Qiil.IO
             return GetArrayOf<T>(count);
         }
 
+        public static T Get<T>(ComplexBinaryReader reader)
+        {
+            if (typeof(IStructWrapper).IsAssignableFrom(typeof(T)))
+                return (T)Activator.CreateInstance(typeof(T), (object)reader);
+
+            return Get<T>(reader.Reader);
+        }
 
         /// <summary>
         /// Reads in a block from a file and converts it to the struct
@@ -127,9 +142,6 @@ namespace Qiil.IO
         /// <returns></returns>
         public static T Get<T>(BinaryReader reader)
         {
-            if (typeof(IStructWrapper).IsAssignableFrom(typeof(T)))
-                return (T)Activator.CreateInstance(typeof(T), (object)reader);
-
             bool isEnum = typeof(T).IsEnum;
 
             Type marshalType = typeof(T).IsEnum
@@ -152,9 +164,9 @@ namespace Qiil.IO
         public void Get<T>(ulong structRVA, ref T destination, PtrType ptrType = PtrType.VA)
         {
             ulong structPtr = Resolve(structRVA, ptrType);
-            Reader.BaseStream.Seek((long)structPtr, SeekOrigin.Begin);
+            Seek((long)structPtr, SeekOrigin.Begin);
 
-            Get(Reader, ref destination);
+            Get(this, ref destination);
         }
 
         public string GetASCIIStr(int size = -1)
@@ -209,6 +221,11 @@ namespace Qiil.IO
             GCHandle handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
             destination = (T)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(T));
             handle.Free();
+        }
+
+        public static void Get<T>(ComplexBinaryReader reader, ref T destination)
+        {
+            Get(reader.Reader, ref destination);
         }
 
         #endregion Public Methods
