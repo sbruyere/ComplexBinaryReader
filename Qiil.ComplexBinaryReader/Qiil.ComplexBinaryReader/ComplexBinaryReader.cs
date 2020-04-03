@@ -266,9 +266,7 @@ namespace Qiil.IO
             } 
 
             if (size == -1)
-            {
                 size = Marshal.SizeOf(destination);
-            }
 
 
             // Read in a byte array
