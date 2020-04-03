@@ -142,20 +142,20 @@ namespace Qiil.IO
         /// <returns></returns>
         public static T Get<T>(BinaryReader reader)
         {
-            bool isEnum = typeof(T).IsEnum;
+            Type genType = typeof(T);
+            bool isEnum = genType.IsEnum;
 
-            Type marshalType = typeof(T).IsEnum
-                ? Enum.GetUnderlyingType(typeof(T))
-                : typeof(T);
+            genType = isEnum
+                ? Enum.GetUnderlyingType(genType)
+                : genType;
 
             // Read in a byte array
-            byte[] bytes = null;
-            bytes = reader.ReadBytes(Marshal.SizeOf(marshalType));
+            byte[] bytes = reader.ReadBytes(Marshal.SizeOf(genType));
 
             // Pin the managed memory while, copy it out the data, then unpin it
             GCHandle handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
 
-            T theStructure = (T)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), marshalType);
+            T theStructure = (T)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), genType);
             handle.Free();
 
             return theStructure;
