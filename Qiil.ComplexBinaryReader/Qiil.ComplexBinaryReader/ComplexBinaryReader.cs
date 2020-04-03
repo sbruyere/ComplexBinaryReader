@@ -256,8 +256,23 @@ namespace Qiil.IO
 
         public static void Get<T>(BinaryReader reader, ref T destination)
         {
+            int size = -1;
+            if (destination is Array)
+            {
+                var elementType = destination.GetType().GetElementType();
+                
+                if (elementType.IsValueType)
+                    size = Marshal.SizeOf(elementType) * (destination as Array).Length;
+            } 
+
+            if (size == -1)
+            {
+                size = Marshal.SizeOf(destination);
+            }
+
+
             // Read in a byte array
-            byte[] bytes = reader.ReadBytes(Marshal.SizeOf(destination));
+            byte[] bytes = reader.ReadBytes(size);
 
             // Pin the managed memory while, copy it out the data, then unpin it
             GCHandle handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
