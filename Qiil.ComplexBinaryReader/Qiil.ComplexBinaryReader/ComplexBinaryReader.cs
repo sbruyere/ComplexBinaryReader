@@ -13,8 +13,22 @@ namespace Qiil.IO
     public abstract class ComplexBinaryReader
     {
         #region Private Fields
+        [JsonIgnore]
+        public Stream Stream { get; set; }
 
-        #endregion Private Fields
+        [JsonIgnore]
+        public BinaryReader Reader { get; set; }
+
+        public string SHA256 { get; set; }
+        #endregion
+
+        #region Abstract methods
+        protected abstract void OnReadStream();
+
+        public abstract long Resolve(long virtAddress, PtrType ptrType = PtrType.VA);
+
+        #endregion
+
 
         #region Public Methods
 
@@ -36,8 +50,6 @@ namespace Qiil.IO
 
         }
 
-        [JsonIgnore]
-        public Stream Stream { get; set; }
 
         private void ComputeSHA256(Stream stream)
         {
@@ -51,18 +63,6 @@ namespace Qiil.IO
             stream.Seek(0, SeekOrigin.Begin);
         }
 
-        protected abstract void OnReadStream();
-
-
-        public string SHA256 { get; set; }
-
-        [JsonIgnore]
-        public BinaryReader Reader { get; set; }
-
-
-        public abstract ulong Resolve(ulong virtAddress, PtrType ptrType = PtrType.VA);
-
-
         /// <summary>
         /// Reads in a block from a file and converts it to the struct
         /// type specified by the template parameter
@@ -71,17 +71,17 @@ namespace Qiil.IO
         /// <param name="reader"></param>
         /// <param name="structPtr"></param>
         /// <returns></returns>
-        public static T FromBinaryReaderFromPtr<T>(BinaryReader reader, ulong structPtr)
+        public static T FromBinaryReaderFromPtr<T>(BinaryReader reader, long structPtr)
         {
-            reader.BaseStream.Seek((long)structPtr, SeekOrigin.Begin);
+            reader.BaseStream.Seek(structPtr, SeekOrigin.Begin);
 
             return Get<T>(reader);
         }
 
 
-        public static T FromBinaryReaderFromPtr<T>(ComplexBinaryReader reader, ulong structPtr)
+        public static T FromBinaryReaderFromPtr<T>(ComplexBinaryReader reader, long structPtr)
         {
-            reader.Seek((long)structPtr, SeekOrigin.Begin);
+            reader.Seek(structPtr, SeekOrigin.Begin);
 
             return Get<T>(reader);
         }
@@ -93,9 +93,9 @@ namespace Qiil.IO
         /// <typeparam name="T"></typeparam>
         /// <param name="structRVA"></param>
         /// <returns></returns>
-        public T Get<T>(ulong structRVA, PtrType ptrType = PtrType.VA)
+        public T Get<T>(long structRVA, PtrType ptrType = PtrType.VA)
         {
-            ulong structPtr = Resolve(structRVA, ptrType);
+            long structPtr = Resolve(structRVA, ptrType);
 
             return FromBinaryReaderFromPtr<T>(this, structPtr);
         }
@@ -105,8 +105,12 @@ namespace Qiil.IO
             return Get<T>(this);
         }
 
-        public T[] GetArrayOf<T>(uint count)
+        public T[] GetArrayOf<T>(int count)
         {
+            if (typeof(T) == typeof(byte))
+                return (T[])(object)Reader.ReadBytes(count);
+
+
             List<T> lstRet = new List<T>();
 
             for (int i = 0; i < count; i++)
@@ -115,12 +119,12 @@ namespace Qiil.IO
             return lstRet.ToArray();
         }
 
-        public T[] GetArrayOf<T>(uint ptr, uint count, PtrType ptrType = PtrType.VA)
+        public T[] GetArrayOf<T>(long ptr, int count, PtrType ptrType = PtrType.VA)
         {
             if (ptr == 0)
                 return new T[0];
 
-            Seek((long)Resolve(ptr, ptrType), SeekOrigin.Begin);
+            Seek(Resolve(ptr, ptrType), SeekOrigin.Begin);
 
             return GetArrayOf<T>(count);
         }
@@ -161,10 +165,10 @@ namespace Qiil.IO
             return theStructure;
         }
 
-        public void Get<T>(ulong structRVA, ref T destination, PtrType ptrType = PtrType.VA)
+        public void Get<T>(long structRVA, ref T destination, PtrType ptrType = PtrType.VA)
         {
-            ulong structPtr = Resolve(structRVA, ptrType);
-            Seek((long)structPtr, SeekOrigin.Begin);
+            long structPtr = Resolve(structRVA, ptrType);
+            Seek(structPtr, SeekOrigin.Begin);
 
             Get(this, ref destination);
         }
@@ -201,13 +205,13 @@ namespace Qiil.IO
         //}
 
         public string GetStr(
-            ulong ptr, 
+            long ptr, 
             PtrType ptrType, 
             int size = -1, 
             Encoding encoding = null, 
             bool nullTerminated = false)
         {
-            Seek((long)Resolve(ptr, ptrType), SeekOrigin.Begin);
+            Seek(Resolve(ptr, ptrType), SeekOrigin.Begin);
 
             return GetStr(size, encoding, nullTerminated);
         }
@@ -260,9 +264,9 @@ namespace Qiil.IO
             if (destination is Array)
             {
                 var elementType = destination.GetType().GetElementType();
-                
-                if (elementType.IsValueType)
-                    size = Marshal.SizeOf(elementType) * (destination as Array).Length;
+
+                if (elementType == typeof(byte))
+                    destination = (T)(object)reader.ReadBytes((destination as Array).Length);
             } 
 
             if (size == -1)
@@ -272,6 +276,7 @@ namespace Qiil.IO
             // Read in a byte array
             byte[] bytes = reader.ReadBytes(size);
 
+            
             // Pin the managed memory while, copy it out the data, then unpin it
             GCHandle handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
             destination = (T)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(T));
@@ -283,42 +288,38 @@ namespace Qiil.IO
             Get(reader.Reader, ref destination);
         }
 
-        #endregion Public Methods
 
-        #region Properties
-
-        #endregion Properties
         public static string ReadNullTerminatedString(BinaryReader stream, Encoding encoding = null)
         {
             return stream.ReadStringNull(encoding ?? Encoding.ASCII);
         }
 
 
-        public string RGetStr(ulong structPtr, Encoding encoding = null)
+        public string RGetStr(long structPtr, Encoding encoding = null)
         {
             if (structPtr == 0) return string.Empty;
 
-            Reader.BaseStream.Seek((long)structPtr, SeekOrigin.Begin);
+            Reader.BaseStream.Seek(structPtr, SeekOrigin.Begin);
 
             return ReadNullTerminatedString(Reader, encoding ?? Encoding.ASCII);
         }
 
-        public string VGetStr(ulong structRVA, Encoding encoding = null, PtrType ptrType = PtrType.VA)
+        public string VGetStr(long structRVA, Encoding encoding = null, PtrType ptrType = PtrType.VA)
         {
             var ptr = Resolve(structRVA, ptrType);
             return RGetStr(ptr, encoding ?? Encoding.ASCII);
         }
 
-        public Guid RGetGuid(ulong structPtr)
+        public Guid RGetGuid(long structPtr)
         {
             if (structPtr == 0) return Guid.Empty;
 
-            Reader.BaseStream.Seek((long)structPtr, SeekOrigin.Begin);
+            Reader.BaseStream.Seek(structPtr, SeekOrigin.Begin);
 
             return Get<Guid>(Reader);
         }
 
-        public Guid VGetGuid(ulong structRVA, PtrType ptrType = PtrType.VA)
+        public Guid VGetGuid(long structRVA, PtrType ptrType = PtrType.VA)
         {
             return RGetGuid(Resolve(structRVA, ptrType));
         }
@@ -339,5 +340,6 @@ namespace Qiil.IO
         {
             return Stream.Seek(offset, seekOrigin);
         }
+        #endregion Public Methods
     }
 }
