@@ -2,7 +2,7 @@
 {
     public static class StructWrapperConst
     {
-        public const uint DEFAULT_CURRENT_POSITION = 0xFFFFFFFF;
+        public const long DEFAULT_CURRENT_POSITION = -1;
     }
 }
 

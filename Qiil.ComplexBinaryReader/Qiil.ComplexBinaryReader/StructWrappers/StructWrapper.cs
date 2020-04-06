@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Qiil.IO.Enums;
 using System;
+using System.Runtime.InteropServices;
 
 namespace Qiil.IO
 {
@@ -10,10 +11,9 @@ namespace Qiil.IO
             where T : struct
         
     {
-        public const uint DEFAULT_CURRENT_POSITION = 0xFFFFFFFF;
         protected StructWrapper(
             ComplexBinaryReader reader,
-            ulong ptr = StructWrapperConst.DEFAULT_CURRENT_POSITION,
+            long ptr = StructWrapperConst.DEFAULT_CURRENT_POSITION,
             PtrType ptrType = PtrType.FileOffset)
             : base(reader, ptr, ptrType)
         {
@@ -34,19 +34,19 @@ namespace Qiil.IO
         [JsonIgnore]
         public R Reader { get; }
 
-        public ulong BasePtr { get; }
-        public static int StructSize { get; } = System.Runtime.InteropServices.Marshal.SizeOf(typeof(T));
+        public long BasePtr { get; }
+        public static int StructSize { get; } = Marshal.SizeOf(typeof(T));
 
         public T Base { get; }
 
         protected StructWrapper(
             R reader,
-            ulong ptr = StructWrapperConst.DEFAULT_CURRENT_POSITION,
+            long ptr = StructWrapperConst.DEFAULT_CURRENT_POSITION,
             PtrType ptrType = PtrType.FileOffset)
         {
             Reader = reader;
 
-            if (ptr != 0xFFFFFFFF)
+            if (ptr != StructWrapperConst.DEFAULT_CURRENT_POSITION)
                 BasePtr = ptr;
 
             Base = reader.Get<T>(ptr, ptrType);
@@ -57,7 +57,7 @@ namespace Qiil.IO
         {
             Reader = reader;
 
-            BasePtr = (ulong)reader.Stream.Position;
+            BasePtr = reader.Stream.Position;
             
             Base = reader.Get<T>();
         }
@@ -76,7 +76,7 @@ namespace Qiil.IO
 
         public static K Get<K>(
             R reader,
-            ulong ptr,
+            long ptr,
             PtrType ptrType = PtrType.FileOffset) where K: StructWrapper<R, T>
         {
             return (K)Activator.CreateInstance(typeof(K), new object[] { reader, ptr, ptrType });
