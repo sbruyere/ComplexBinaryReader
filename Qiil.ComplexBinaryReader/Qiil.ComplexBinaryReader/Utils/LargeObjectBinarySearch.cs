@@ -11,7 +11,7 @@ namespace Qiil.Binary.Utils
         {
             List<long> searchResults = new List<long>(); //The results as offsets within the file
 
-            int realBufferSize = (int)Math.Min(stream.Length, 400_000);
+            int realBufferSize = (int)Math.Min(stream.Length, bufferSize);
 
             byte[] buffer = new byte[realBufferSize];
             int readCount = 0;
