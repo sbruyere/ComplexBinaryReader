@@ -146,6 +146,9 @@ namespace Qiil.IO
         /// <returns></returns>
         public static T Get<T>(BinaryReader reader)
         {
+            if (reader.BaseStream.Position >= reader.BaseStream.Length)
+                throw new EndOfStreamException();
+
             Type genType = typeof(T);
             bool isEnum = genType.IsEnum;
 
