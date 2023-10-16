@@ -1,5 +1,4 @@
 ﻿using Newtonsoft.Json;
-using Qiil.IO.Enums;
 using System;
 using System.Runtime.InteropServices;
 
@@ -7,15 +6,15 @@ namespace Qiil.IO
 {
     public interface IStructWrapper { }
 
-    public abstract class StructWrapper<T> : StructWrapper<ComplexBinaryReader, T>, IStructWrapper
-            where T : struct
+    public abstract class StructWrapper<TStruct> : StructWrapper<ComplexBinaryReader, TStruct>, IStructWrapper
+            where TStruct : struct
         
     {
         protected StructWrapper(
             ComplexBinaryReader reader,
-            long ptr = StructWrapperConst.DEFAULT_CURRENT_POSITION,
-            PtrType ptrType = PtrType.FileOffset)
-            : base(reader, ptr, ptrType)
+            IPtrResolver ptrResolver,
+            long ptr = StructWrapperConst.DEFAULT_CURRENT_POSITION) 
+            : base(reader, ptrResolver, ptr)
         {
         }
 
@@ -26,60 +25,61 @@ namespace Qiil.IO
         }
     }
 
-    public abstract class StructWrapper<R, T> : IStructWrapper
-            where R : ComplexBinaryReader
-            where T : struct
+    public abstract class StructWrapper<TReader, TStruct> : IStructWrapper
+            where TReader : ComplexBinaryReader
+            where TStruct : struct
         
     {
         [JsonIgnore]
-        public R Reader { get; }
+        public TReader Reader { get; }
 
         public long BasePtr { get; }
-        public static int StructSize { get; } = Marshal.SizeOf(typeof(T));
+        public static int StructSize { get; } = Marshal.SizeOf(typeof(TStruct));
 
-        public T Base { get; }
+        public TStruct Base { get; }
 
         protected StructWrapper(
-            R reader,
-            long ptr = StructWrapperConst.DEFAULT_CURRENT_POSITION,
-            PtrType ptrType = PtrType.FileOffset)
+            TReader reader,
+            IPtrResolver ptrResolver,
+            long ptr = StructWrapperConst.DEFAULT_CURRENT_POSITION)
         {
             Reader = reader;
 
             if (ptr != StructWrapperConst.DEFAULT_CURRENT_POSITION)
                 BasePtr = ptr;
 
-            Base = reader.Get<T>(ptr, ptrType);
+            Base = reader.Get<TStruct>(ptr, ptrResolver);
         }
 
         protected StructWrapper(
-            R reader)
+            TReader reader)
         {
             Reader = reader;
 
             BasePtr = reader.Stream.Position;
             
-            Base = reader.Get<T>();
+            Base = reader.Get<TStruct>();
         }
 
         /// <summary>
         /// Get a struct at the reader stream's position.
         /// </summary>
-        /// <typeparam name="K">Struct wrapper type.</typeparam>
+        /// <typeparam name="TRet">Struct wrapper type.</typeparam>
         /// <param name="reader">Reader.</param>
         /// <returns></returns>
-        public static K Get<K>(
-            R reader) where K : StructWrapper<R, T>
+        public static TRet Get<TRet>(
+            TReader reader) where TRet : StructWrapper<TReader, TStruct>
         {
-            return (K)Activator.CreateInstance(typeof(K), new object[] { reader });
+            return (TRet)Activator.CreateInstance(typeof(TRet), new object[] { reader });
         }
 
-        public static K Get<K>(
-            R reader,
+        public static TRet Get<TRet>(
+            TReader reader,
             long ptr,
-            PtrType ptrType = PtrType.FileOffset) where K: StructWrapper<R, T>
+            PtrResolver<TReader> ptrResolver) where TRet
+            : StructWrapper<TReader, TStruct>
         {
-            return (K)Activator.CreateInstance(typeof(K), new object[] { reader, ptr, ptrType });
+            return (TRet)Activator.CreateInstance(typeof(TRet), new object[] { reader, ptr, ptrResolver });
         }
 
     }

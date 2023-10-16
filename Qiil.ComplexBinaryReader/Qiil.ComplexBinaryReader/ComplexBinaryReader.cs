@@ -6,7 +6,6 @@ using System.Security.Cryptography;
 using System.Text;
 using Newtonsoft.Json;
 using Qiil.Binary.Utils;
-using Qiil.IO.Enums;
 
 namespace Qiil.IO
 {
@@ -25,7 +24,6 @@ namespace Qiil.IO
         #region Abstract methods
         protected abstract void OnReadStream();
 
-        public abstract long Resolve(long virtAddress, PtrType ptrType = PtrType.VA);
 
         #endregion
 
@@ -63,42 +61,7 @@ namespace Qiil.IO
             stream.Seek(0, SeekOrigin.Begin);
         }
 
-        /// <summary>
-        /// Reads in a block from a file and converts it to the struct
-        /// type specified by the template parameter
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="reader"></param>
-        /// <param name="structPtr"></param>
-        /// <returns></returns>
-        public static T FromBinaryReaderFromPtr<T>(BinaryReader reader, long structPtr)
-        {
-            reader.BaseStream.Seek(structPtr, SeekOrigin.Begin);
 
-            return Get<T>(reader);
-        }
-
-
-        public static T FromBinaryReaderFromPtr<T>(ComplexBinaryReader reader, long structPtr)
-        {
-            reader.Seek(structPtr, SeekOrigin.Begin);
-
-            return Get<T>(reader);
-        }
-
-        /// <summary>
-        /// Reads in a block from a file and converts it to the struct
-        /// type specified by the template parameter
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="structRVA"></param>
-        /// <returns></returns>
-        public T Get<T>(long structRVA, PtrType ptrType = PtrType.VA)
-        {
-            long structPtr = Resolve(structRVA, ptrType);
-
-            return FromBinaryReaderFromPtr<T>(this, structPtr);
-        }
 
         public T Get<T>()
         {
@@ -119,15 +82,6 @@ namespace Qiil.IO
             return lstRet.ToArray();
         }
 
-        public T[] GetArrayOf<T>(long ptr, int count, PtrType ptrType = PtrType.VA)
-        {
-            if (ptr == 0)
-                return new T[0];
-
-            Seek(Resolve(ptr, ptrType), SeekOrigin.Begin);
-
-            return GetArrayOf<T>(count);
-        }
 
         public static T Get<T>(ComplexBinaryReader reader)
         {
@@ -168,13 +122,6 @@ namespace Qiil.IO
             return theStructure;
         }
 
-        public void Get<T>(long structRVA, ref T destination, PtrType ptrType = PtrType.VA)
-        {
-            long structPtr = Resolve(structRVA, ptrType);
-            Seek(structPtr, SeekOrigin.Begin);
-
-            Get(this, ref destination);
-        }
 
         //public string GetASCIIStr(int size = -1)
         //{
@@ -206,18 +153,6 @@ namespace Qiil.IO
 
         //    return encoding.GetString(bytes);
         //}
-
-        public string GetStr(
-            long ptr, 
-            PtrType ptrType, 
-            int size = -1, 
-            Encoding encoding = null, 
-            bool nullTerminated = false)
-        {
-            Seek(Resolve(ptr, ptrType), SeekOrigin.Begin);
-
-            return GetStr(size, encoding, nullTerminated);
-        }
 
 
         public string GetStr(
@@ -292,11 +227,6 @@ namespace Qiil.IO
         }
 
 
-        public static string ReadNullTerminatedString(BinaryReader stream, Encoding encoding = null)
-        {
-            return stream.ReadStringNull(encoding ?? Encoding.ASCII);
-        }
-
 
         public string RGetStr(long structPtr, Encoding encoding = null)
         {
@@ -307,12 +237,6 @@ namespace Qiil.IO
             return ReadNullTerminatedString(Reader, encoding ?? Encoding.ASCII);
         }
 
-        public string VGetStr(long structRVA, Encoding encoding = null, PtrType ptrType = PtrType.VA)
-        {
-            var ptr = Resolve(structRVA, ptrType);
-            return RGetStr(ptr, encoding ?? Encoding.ASCII);
-        }
-
         public Guid RGetGuid(long structPtr)
         {
             if (structPtr == 0) return Guid.Empty;
@@ -320,11 +244,6 @@ namespace Qiil.IO
             Reader.BaseStream.Seek(structPtr, SeekOrigin.Begin);
 
             return Get<Guid>(Reader);
-        }
-
-        public Guid VGetGuid(long structRVA, PtrType ptrType = PtrType.VA)
-        {
-            return RGetGuid(Resolve(structRVA, ptrType));
         }
 
         public static string GetSHA256(ref byte[] bytes)
@@ -344,5 +263,89 @@ namespace Qiil.IO
             return Stream.Seek(offset, seekOrigin);
         }
         #endregion Public Methods
+
+        public void Get<TDest>(long ptr, ref TDest destination, IPtrResolver resolver)
+        {
+            resolver.Seek(ptr);
+
+            Get(this, ref destination);
+        }
+
+        /// <summary>
+        /// Reads in a block from a file and converts it to the struct
+        /// type specified by the template parameter
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="structRVA"></param>
+        /// <returns></returns>
+        public TDest Get<TDest>(long structRVA, IPtrResolver resolver)
+        {
+            long structPtr = resolver.Resolve(structRVA);
+
+            return FromBinaryReaderFromPtr<TDest>(this, structPtr);
+        }
+
+        public TDest[] GetArrayOf<TDest>(long ptr, int count, IPtrResolver resolver)
+        {
+            if (ptr == 0)
+                return new TDest[0];
+
+            resolver.Seek(ptr);
+
+            return GetArrayOf<TDest>(count);
+        }
+        public string GetStr(
+            long ptr,
+            IPtrResolver resolver,
+            int size = -1,
+            Encoding encoding = null,
+            bool nullTerminated = false)
+        {
+            resolver.Seek(ptr);
+
+            return GetStr(size, encoding, nullTerminated);
+        }
+
+        public string VGetStr(long structRVA, IPtrResolver resolver, Encoding encoding = null)
+        {
+            var ptr = resolver.Resolve(structRVA);
+            return RGetStr(ptr, encoding ?? Encoding.ASCII);
+        }
+
+        public Guid VGetGuid(long structRVA, IPtrResolver resolver)
+        {
+            var ptr = resolver.Resolve(structRVA);
+            return RGetGuid(ptr);
+        }
+
+        #region Static methods
+        /// <summary>
+        /// Reads in a block from a file and converts it to the struct
+        /// type specified by the template parameter
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="reader"></param>
+        /// <param name="structPtr"></param>
+        /// <returns></returns>
+        public static T FromBinaryReaderFromPtr<T>(BinaryReader reader, long structPtr)
+        {
+            reader.BaseStream.Seek(structPtr, SeekOrigin.Begin);
+
+            return Get<T>(reader);
+        }
+
+
+        public static T FromBinaryReaderFromPtr<T>(ComplexBinaryReader reader, long structPtr)
+        {
+            reader.Seek(structPtr, SeekOrigin.Begin);
+
+            return Get<T>(reader);
+        }
+        public static string ReadNullTerminatedString(BinaryReader stream, Encoding encoding = null)
+        {
+            return stream.ReadStringNull(encoding ?? Encoding.ASCII);
+        }
+
+        #endregion
     }
 }
