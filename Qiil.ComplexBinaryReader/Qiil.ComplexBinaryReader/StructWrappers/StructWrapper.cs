@@ -45,10 +45,16 @@ namespace Qiil.IO
         {
             Reader = reader;
 
-            if (ptr != StructWrapperConst.DEFAULT_CURRENT_POSITION)
+            if (ptr == StructWrapperConst.DEFAULT_CURRENT_POSITION)
+            {
+                BasePtr = reader.Stream.Position;
+            } 
+            else
+            {
                 BasePtr = ptr;
 
-            Base = reader.Get<TStruct>(ptr, ptrResolver);
+            }
+            Base = reader.Get<TStruct>(BasePtr, ptrResolver);
         }
 
         protected StructWrapper(
