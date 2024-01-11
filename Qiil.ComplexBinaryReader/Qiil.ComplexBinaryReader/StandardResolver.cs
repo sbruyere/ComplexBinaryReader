@@ -1,9 +1,4 @@
-﻿using Qiil.IO;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Qiil.IO
+﻿namespace Qiil.IO
 {
     public class StandardPtrResolver : PtrResolver<ComplexBinaryReader>
     {
