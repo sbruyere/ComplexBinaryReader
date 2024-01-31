@@ -1,4 +1,17 @@
-﻿using System;
+﻿/*
+ * --------------------------------------------------------------------------------
+ * "Qiil.ComplexBinaryReader" (c) by Sylvain BRUYERE.
+ * 
+ * This project is licensed under the MIT License. For more information, please see the LICENSE file
+ * or visit https://opensource.org/licenses/MIT.
+ * --------------------------------------------------------------------------------
+ * 
+ * Author: Sylvain BRUYERE.
+ * Year: 2024
+ * Description: 
+ * --------------------------------------------------------------------------------
+ */
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
